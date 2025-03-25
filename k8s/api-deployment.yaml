@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-service
+  labels:
+    app: api-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-service
+  template:
+    metadata:
+      labels:
+        app: api-service
+    spec:
+      containers:
+        - name: api-service
+          image: mtls-demo/api-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: 'production'
+            - name: PORT
+              value: '3000'
+            - name: CERT_PATH
+              value: '/certs'
+            - name: LOG_LEVEL
+              value: 'info'
+          volumeMounts:
+            - name: api-certs
+              mountPath: /certs/api-service.crt
+              subPath: api-service.crt
+            - name: api-certs
+              mountPath: /certs/api-service.key
+              subPath: api-service.key
+            - name: ca-cert
+              mountPath: /certs/ca.crt
+              subPath: ca.crt
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+              scheme: HTTPS
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+              scheme: HTTPS
+            initialDelaySeconds: 15
+            periodSeconds: 20
+      volumes:
+        - name: api-certs
+          secret:
+            secretName: api-service-certs
+        - name: ca-cert
+          secret:
+            secretName: ca-cert
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-service
+spec:
+  selector:
+    app: api-service
+  ports:
+    - port: 3000
+      targetPort: 3000
+  type: ClusterIP

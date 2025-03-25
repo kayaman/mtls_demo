@@ -1,0 +1,14 @@
+[req]
+req_extensions = v3_req
+distinguished_name = req_distinguished_name
+
+[req_distinguished_name]
+
+[v3_req]
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.1 = api-service.default.svc.cluster.local
+DNS.2 = api-service
+DNS.3 = api-service.default
+DNS.4 = api-service.default.svc.cluster.local

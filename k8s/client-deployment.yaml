@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: client-service
+  labels:
+    app: client-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: client-service
+  template:
+    metadata:
+      labels:
+        app: client-service
+    spec:
+      containers:
+        - name: client-service
+          image: mtls-demo/client-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4000
+          env:
+            - name: NODE_ENV
+              value: 'production'
+            - name: PORT
+              value: '4000'
+            - name: CERT_PATH
+              value: '/certs'
+            - name: API_SERVICE_URL
+              value: 'https://api-service:3000'
+            - name: API_REQUEST_TIMEOUT
+              value: '5000'
+            - name: LOG_LEVEL
+              value: 'info'
+          volumeMounts:
+            - name: client-certs
+              mountPath: /certs/client-service.crt
+              subPath: client-service.crt
+            - name: client-certs
+              mountPath: /certs/client-service.key
+              subPath: client-service.key
+            - name: ca-cert
+              mountPath: /certs/ca.crt
+              subPath: ca.crt
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+      volumes:
+        - name: client-certs
+          secret:
+            secretName: client-service-certs
+        - name: ca-cert
+          secret:
+            secretName: ca-cert
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: client-service
+spec:
+  selector:
+    app: client-service
+  ports:
+    - port: 80
+      targetPort: 4000
+  type: LoadBalancer
